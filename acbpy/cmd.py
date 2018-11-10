@@ -5,15 +5,15 @@ from . import handler as acb
 
 def main():
     if len(sys.argv) is 1:
-        message("ファイルを指定して下さい。\nUsage: acbpy target_file [target dir]")
+        message("Please specify file.\nUsage: acbpy target_file [target dir]")
     elif 2 <= len(sys.argv) <= 3:
-        message("展開を開始します。")
+        message("Starting extract.")
         if len(sys.argv) is 3:
             if not os.path.exists(sys.argv[2]):
-                message(f"展開対象ディレクトリが存在しませんでした: {sys.argv[2]}")
+                message(f"Target directory did not exist: {sys.argv[2]}")
                 return False
             save_dir = sys.argv[2]
-            message(f"展開対象ディレクトリ: {save_dir}")
+            message(f"Target directory: {save_dir}")
         else:
             save_dir = ""
         if os.path.exists(sys.argv[1]):
@@ -23,7 +23,7 @@ def main():
                         w.write(j.binary.read())
                         message(f"cue_id: {j.track.cue_id} / {j.track.name}.{j.extension}")
         else:
-            message(f"対象ファイルが存在しませんでした: {sys.argv[1]}")
+            message(f"Target file did not exist: {sys.argv[1]}")
 
 
 def message(msg: str):

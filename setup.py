@@ -8,7 +8,7 @@ with open('README.md') as f:
 
 setup(
     name='acbpy',
-    version='0.0.1',
+    version='1.0.0',
     description='simple extract library for acb.',
     long_description=readme,
     author='Cryptomelone',

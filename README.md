@@ -1,8 +1,8 @@
 ## acbpy
 
-acbpyはPython3で動作する簡易的なacb展開ライブラリです。<br>
-acb形式のファイルをパースするための関数や簡単なコマンドラインツールを内包しています。<br>
-このライブラリは[acb.py](https://github.com/summertriangle-dev/acb.py)のラッパーライブラリです。
+acbpy is simple acb extraction library working on Python3.  
+It contains functions and simple command line tool for parse acb format file.  
+This library is wrapper library of [acb.py](https://github.com/summertriangle-dev/acb.py).  
 
 ## install
 
@@ -43,7 +43,7 @@ with open("target_file.acb", "rb") as f:
     - track: track_t
     - binary: io.BytesIO
     - extension: str
-    
+
 ## test
 
 ```bash
@@ -51,4 +51,5 @@ python3 setup.py test
 ```
 
 ## license
+
 follows: [acb.py](/acbpy/acb.py#L2-L45)
