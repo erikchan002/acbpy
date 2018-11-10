@@ -60,23 +60,24 @@ COLUMN_STORAGE_CONSTANT2 = 0x70
 COLUMN_STORAGE_ZERO = 0x10
 
 COLUMN_TYPE_MASK = 0x0F
-COLUMN_TYPE_DATA   = 0x0B
+COLUMN_TYPE_DATA = 0x0B
 COLUMN_TYPE_STRING = 0x0A
-COLUMN_TYPE_FLOAT  = 0x08
-COLUMN_TYPE_8BYTE  = 0x06
+COLUMN_TYPE_FLOAT = 0x08
+COLUMN_TYPE_8BYTE = 0x06
 COLUMN_TYPE_4BYTE2 = 0x05
-COLUMN_TYPE_4BYTE  = 0x04
+COLUMN_TYPE_4BYTE = 0x04
 COLUMN_TYPE_2BYTE2 = 0x03
-COLUMN_TYPE_2BYTE  = 0x02
+COLUMN_TYPE_2BYTE = 0x02
 COLUMN_TYPE_1BYTE2 = 0x01
-COLUMN_TYPE_1BYTE  = 0x00
+COLUMN_TYPE_1BYTE = 0x00
 
-WAVEFORM_ENCODE_TYPE_ADX          = 0
-WAVEFORM_ENCODE_TYPE_HCA          = 2
-WAVEFORM_ENCODE_TYPE_VAG          = 7
-WAVEFORM_ENCODE_TYPE_ATRAC3       = 8
-WAVEFORM_ENCODE_TYPE_BCWAV        = 9
+WAVEFORM_ENCODE_TYPE_ADX = 0
+WAVEFORM_ENCODE_TYPE_HCA = 2
+WAVEFORM_ENCODE_TYPE_VAG = 7
+WAVEFORM_ENCODE_TYPE_ATRAC3 = 8
+WAVEFORM_ENCODE_TYPE_BCWAV = 9
 WAVEFORM_ENCODE_TYPE_NINTENDO_DSP = 13
+
 
 # string and data fields require more information
 def promise_data(r):
@@ -84,50 +85,55 @@ def promise_data(r):
     size = r.uint32_t()
     return lambda h: r.bytes(size, at=h.data_offset + 8 + offset)
 
+
 def promise_string(r):
     offset = r.uint32_t()
     return lambda h: r.string0(at=h.string_table_offset + 8 + offset)
 
+
 column_data_dtable = {
-    COLUMN_TYPE_DATA   : promise_data,
-    COLUMN_TYPE_STRING : promise_string,
-    COLUMN_TYPE_FLOAT  : lambda r: r.float32_t(),
-    COLUMN_TYPE_8BYTE  : lambda r: r.uint64_t(),
-    COLUMN_TYPE_4BYTE2 : lambda r: r.int32_t(),
-    COLUMN_TYPE_4BYTE  : lambda r: r.uint32_t(),
-    COLUMN_TYPE_2BYTE2 : lambda r: r.int16_t(),
-    COLUMN_TYPE_2BYTE  : lambda r: r.uint16_t(),
-    COLUMN_TYPE_1BYTE2 : lambda r: r.int8_t(),
-    COLUMN_TYPE_1BYTE  : lambda r: r.uint8_t()}
+    COLUMN_TYPE_DATA: promise_data,
+    COLUMN_TYPE_STRING: promise_string,
+    COLUMN_TYPE_FLOAT: lambda r: r.float32_t(),
+    COLUMN_TYPE_8BYTE: lambda r: r.uint64_t(),
+    COLUMN_TYPE_4BYTE2: lambda r: r.int32_t(),
+    COLUMN_TYPE_4BYTE: lambda r: r.uint32_t(),
+    COLUMN_TYPE_2BYTE2: lambda r: r.int16_t(),
+    COLUMN_TYPE_2BYTE: lambda r: r.uint16_t(),
+    COLUMN_TYPE_1BYTE2: lambda r: r.int8_t(),
+    COLUMN_TYPE_1BYTE: lambda r: r.uint8_t()}
 
 column_data_stable = {
-    COLUMN_TYPE_DATA   : "8s",
-    COLUMN_TYPE_STRING : "4s",
-    COLUMN_TYPE_FLOAT  : "f",
-    COLUMN_TYPE_8BYTE  : "Q",
-    COLUMN_TYPE_4BYTE2 : "i",
-    COLUMN_TYPE_4BYTE  : "I",
-    COLUMN_TYPE_2BYTE2 : "h",
-    COLUMN_TYPE_2BYTE  : "H",
-    COLUMN_TYPE_1BYTE2 : "b",
-    COLUMN_TYPE_1BYTE  : "B"}
+    COLUMN_TYPE_DATA: "8s",
+    COLUMN_TYPE_STRING: "4s",
+    COLUMN_TYPE_FLOAT: "f",
+    COLUMN_TYPE_8BYTE: "Q",
+    COLUMN_TYPE_4BYTE2: "i",
+    COLUMN_TYPE_4BYTE: "I",
+    COLUMN_TYPE_2BYTE2: "h",
+    COLUMN_TYPE_2BYTE: "H",
+    COLUMN_TYPE_1BYTE2: "b",
+    COLUMN_TYPE_1BYTE: "B"}
 
 wave_type_ftable = {
-    WAVEFORM_ENCODE_TYPE_ADX          : ".adx",
-    WAVEFORM_ENCODE_TYPE_HCA          : ".hca",
-    WAVEFORM_ENCODE_TYPE_VAG          : ".at3",
-    WAVEFORM_ENCODE_TYPE_ATRAC3       : ".vag",
-    WAVEFORM_ENCODE_TYPE_BCWAV        : ".bcwav",
-    WAVEFORM_ENCODE_TYPE_NINTENDO_DSP : ".dsp"}
+    WAVEFORM_ENCODE_TYPE_ADX: ".adx",
+    WAVEFORM_ENCODE_TYPE_HCA: ".hca",
+    WAVEFORM_ENCODE_TYPE_VAG: ".at3",
+    WAVEFORM_ENCODE_TYPE_ATRAC3: ".vag",
+    WAVEFORM_ENCODE_TYPE_BCWAV: ".bcwav",
+    WAVEFORM_ENCODE_TYPE_NINTENDO_DSP: ".dsp"}
+
 
 class R(object):
     """ file reader based on types """
+
     def __init__(self, file):
         self.f = file
 
-    def readfunc(fmt):
-        a = struct.Struct(fmt)
+    def readfunc(self):
+        a = struct.Struct(self)
         b = a.size
+
         def f(f, at=None):
             if at is not None:
                 back = f.tell()
@@ -137,31 +143,31 @@ class R(object):
                 return d
             else:
                 return a.unpack(f.read(b))[0]
+
         return f
 
-    def latebinder(f):
-        return lambda s: f(s.f)
+    def latebinder(self):
+        return lambda s: self(s.f)
 
-    int8_t    = latebinder(readfunc(">b"))
-    uint8_t   = latebinder(readfunc(">B"))
-    int16_t   = latebinder(readfunc(">h"))
-    uint16_t  = latebinder(readfunc(">H"))
-    int32_t   = latebinder(readfunc(">i"))
-    uint32_t  = latebinder(readfunc(">I"))
-    int64_t   = latebinder(readfunc(">q"))
-    uint64_t  = latebinder(readfunc(">Q"))
+    int8_t = latebinder(readfunc(">b"))
+    uint8_t = latebinder(readfunc(">B"))
+    int16_t = latebinder(readfunc(">h"))
+    uint16_t = latebinder(readfunc(">H"))
+    int32_t = latebinder(readfunc(">i"))
+    uint32_t = latebinder(readfunc(">I"))
+    int64_t = latebinder(readfunc(">q"))
+    uint64_t = latebinder(readfunc(">Q"))
     float32_t = latebinder(readfunc(">f"))
 
-    le_int8_t    = latebinder(readfunc("<b"))
-    le_uint8_t   = latebinder(readfunc("<B"))
-    le_int16_t   = latebinder(readfunc("<h"))
-    le_uint16_t  = latebinder(readfunc("<H"))
-    le_int32_t   = latebinder(readfunc("<i"))
-    le_uint32_t  = latebinder(readfunc("<I"))
-    le_int64_t   = latebinder(readfunc("<q"))
-    le_uint64_t  = latebinder(readfunc("<Q"))
+    le_int8_t = latebinder(readfunc("<b"))
+    le_uint8_t = latebinder(readfunc("<B"))
+    le_int16_t = latebinder(readfunc("<h"))
+    le_uint16_t = latebinder(readfunc("<H"))
+    le_int32_t = latebinder(readfunc("<i"))
+    le_uint32_t = latebinder(readfunc("<I"))
+    le_int64_t = latebinder(readfunc("<q"))
+    le_uint64_t = latebinder(readfunc("<Q"))
     le_float32_t = latebinder(readfunc("<f"))
-
 
     def seek(self, at, where=os.SEEK_SET):
         self.f.seek(at, where)
@@ -216,18 +222,23 @@ class R(object):
         self.f.seek(bk + len(string) + 1)
         return string.decode("utf8")
 
+
 class Struct(struct.Struct):
     """ struct with an output filter (usually a namedtuple) """
+
     def __init__(self, fmt, out_type):
         super().__init__(fmt)
         self.out_type = out_type
 
     def unpack(self, buf):
-        return self.out_type(* super().unpack(buf))
+        return self.out_type(*super().unpack(buf))
+
 
 utf_header_t = Struct(">IHHIIIHHI",
-    T("utf_header_t", ("table_size", "u1", "row_offset", "string_table_offset",
-    "data_offset", "table_name_offset", "number_of_fields", "row_size", "number_of_rows")))
+                      T("utf_header_t", ("table_size", "u1", "row_offset", "string_table_offset",
+                                         "data_offset", "table_name_offset", "number_of_fields", "row_size",
+                                         "number_of_rows")))
+
 
 class UTFTable(object):
     def __init__(self, file):
@@ -297,7 +308,9 @@ class UTFTable(object):
             ret.update(self.constants)
             yield ret
 
+
 track_t = T("track_t", ("cue_id", "name", "wav_id", "enc_type", "is_stream"))
+
 
 class TrackList(object):
     def __init__(self, utf):
@@ -327,18 +340,22 @@ class TrackList(object):
             wav_id = wavs.rows[b].get("Id")
             if wav_id is None:
                 wav_id = wavs.rows[b]["MemoryAwbId"]
-            
+
             enc = wavs.rows[b]["EncodeType"]
             is_stream = wavs.rows[b]["Streaming"]
 
             self.tracks.append(track_t(row["CueId"], name_map.get(ind, "UNKNOWN"), wav_id, enc, is_stream))
 
+
 def align(n):
     def _align(number):
         return math.ceil(number / n) * n
+
     return _align
 
+
 afs2_file_ent_t = T("afs2_file_ent_t", ("cue_id", "offset", "size"))
+
 
 class AFSArchive(object):
     def __init__(self, file):
@@ -390,6 +407,7 @@ class AFSArchive(object):
     def file_data(self, ent):
         return self.src.bytes(ent.size, at=ent.offset)
 
+
 def extract_acb(acb_file, target_dir):
     utf = UTFTable(acb_file)
     cue = TrackList(utf)
@@ -402,9 +420,11 @@ def extract_acb(acb_file, target_dir):
         with open(os.path.join(target_dir, name), "wb") as named_out_file:
             named_out_file.write(data_source.file_data_for_cue_id(track.wav_id))
 
+
 def main(invocation, acb_file, target_dir, *_):
     with open(acb_file, "rb") as acb:
         extract_acb(acb, target_dir)
+
 
 if __name__ == '__main__':
     main(*sys.argv)
