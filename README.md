@@ -7,7 +7,7 @@ This library is wrapper library of [acb.py](https://github.com/summertriangle-de
 ## install
 
 ```bash
-pip3 install git+ssh://git@github.com/Cryptomelone/acbpy.git
+pip3 install git+https://github.com/erikchan002/acbpy.git
 ```
 
 ## usage
