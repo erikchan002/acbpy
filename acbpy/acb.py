@@ -248,7 +248,8 @@ class UTFTable(object):
             raise ValueError("bad magic")
 
         self.header = buf.struct(utf_header_t)
-        self.name = buf.string0(at=self.header.string_table_offset + 8 + self.header.table_name_offset)
+        self.name = buf.string0(
+            at=self.header.string_table_offset + 8 + self.header.table_name_offset)
 
         buf.seek(0x20)
         self.read_schema(buf)
@@ -271,11 +272,13 @@ class UTFTable(object):
             type_key = field_type & COLUMN_TYPE_MASK
 
             if occurrence in (COLUMN_STORAGE_CONSTANT, COLUMN_STORAGE_CONSTANT2):
-                name = buf.string0(at=self.header.string_table_offset + 8 + name_offset)
+                name = buf.string0(
+                    at=self.header.string_table_offset + 8 + name_offset)
                 val = column_data_dtable[type_key](buf)
                 constants[name] = val
             else:
-                dynamic_keys.append(buf.string0(at=self.header.string_table_offset + 8 + name_offset))
+                dynamic_keys.append(buf.string0(
+                    at=self.header.string_table_offset + 8 + name_offset))
                 format += column_data_stable[type_key]
 
         for k in constants.keys():
@@ -292,10 +295,12 @@ class UTFTable(object):
             if isinstance(val, bytes):
                 if len(val) == 8:
                     offset, size = struct.unpack(">II", val)
-                    ret.append(buf.bytes(size, at=self.header.data_offset + 8 + offset))
+                    ret.append(
+                        buf.bytes(size, at=self.header.data_offset + 8 + offset))
                 else:
                     offset = struct.unpack(">I", val)[0]
-                    ret.append(buf.string0(at=self.header.string_table_offset + 8 + offset))
+                    ret.append(buf.string0(
+                        at=self.header.string_table_offset + 8 + offset))
             else:
                 ret.append(val)
         return tuple(ret)
@@ -314,27 +319,61 @@ track_t = T("track_t", ("cue_id", "name", "wav_id", "enc_type", "is_stream"))
 
 class TrackList(object):
     def __init__(self, utf):
-        cue_handle = io.BytesIO(utf.rows[0]["CueTable"])
         nam_handle = io.BytesIO(utf.rows[0]["CueNameTable"])
-        wav_handle = io.BytesIO(utf.rows[0]["WaveformTable"])
+        cue_handle = io.BytesIO(utf.rows[0]["CueTable"])
+        seq_handle = io.BytesIO(utf.rows[0]["SequenceTable"])
+        trk_handle = io.BytesIO(utf.rows[0]["TrackTable"])
+        evt_handle = io.BytesIO(utf.rows[0]["TrackEventTable"])
         syn_handle = io.BytesIO(utf.rows[0]["SynthTable"])
+        wav_handle = io.BytesIO(utf.rows[0]["WaveformTable"])
 
-        cues = UTFTable(cue_handle)
         nams = UTFTable(nam_handle)
-        wavs = UTFTable(wav_handle)
-        syns = UTFTable(syn_handle)
+        cues = UTFTable(cue_handle)
+        seqs = UTFTable(seq_handle)
+        trks = UTFTable(trk_handle)
+        evts = UTFTable(evt_handle)
 
         self.tracks = []
+
+        anyWaveform = False
+        for rows in evts.rows:
+            tlv_code, tlv_size = struct.unpack(">HB", rows["Command"][0:3])
+            if tlv_code == 2000:
+                anyWaveform = True
+                break
+        if not anyWaveform:
+            return
+
+        syns = UTFTable(syn_handle)
+        wavs = UTFTable(wav_handle)
 
         name_map = {}
         for row in nams.rows:
             name_map[row["CueIndex"]] = row["CueName"]
 
-        for ind, row in enumerate(cues.rows):
+        # print(
+        #     len(nams.rows),
+        #     len(cues.rows),
+        #     len(seqs.rows),
+        #     len(trks.rows),
+        #     len(evts.rows),
+        #     len(syns.rows),
+        #     len(wavs.rows),
+        # )
+        for row in cues.rows:
             if row["ReferenceType"] not in {3, 8}:
-                raise RuntimeError("ReferenceType {0} not implemented.".format(row["ReferenceType"]))
+                raise RuntimeError(
+                    "ReferenceType {0} not implemented.".format(row["ReferenceType"]))
 
-            r_data = syns.rows[row["ReferenceIndex"]]["ReferenceItems"]
+            cmd = evts.rows[trks.rows[row["ReferenceIndex"]]
+                            ["EventIndex"]]["Command"]
+            tlv_code, tlv_size = struct.unpack(">HB", cmd[0:3])
+            if tlv_code != 2000:
+                continue
+            tlv_type, tlv_index = struct.unpack(">HH", cmd[3:7])
+            if tlv_type != 0x02:
+                continue
+            r_data = syns.rows[tlv_index]["ReferenceItems"]
             a, b = struct.unpack(">HH", r_data)
 
             wav_id = wavs.rows[b].get("Id")
@@ -344,7 +383,8 @@ class TrackList(object):
             enc = wavs.rows[b]["EncodeType"]
             is_stream = wavs.rows[b]["Streaming"]
 
-            self.tracks.append(track_t(row["CueId"], name_map.get(ind, "UNKNOWN"), wav_id, enc, is_stream))
+            self.tracks.append(track_t(row["CueId"], name_map.get(
+                row["CueId"], "UNKNOWN"), wav_id, enc, is_stream))
 
 
 def align(n):
@@ -368,12 +408,12 @@ class AFSArchive(object):
         version = buf.bytes(4)
         file_count = buf.le_uint32_t()
         self.alignment = buf.le_uint32_t()
-        print("afs2:", file_count, "files in ar")
-        print("afs2: aligned to", self.alignment, "bytes")
+        # print("afs2:", file_count, "files in ar")
+        # print("afs2: aligned to", self.alignment, "bytes")
 
         self.offset_size = version[1]
         self.offset_mask = int("FF" * self.offset_size, 16)
-        print("afs2: a file offset is", self.offset_size, "bytes")
+        # print("afs2: a file offset is", self.offset_size, "bytes")
 
         self.files = []
         self.create_file_entries(buf, file_count)
@@ -395,7 +435,8 @@ class AFSArchive(object):
             lambda my_offset, next_offset: next_offset - my_offset,
             zip(aligned_offs, offsets_for_length_calculating))
 
-        self.files = list(itertools.starmap(afs2_file_ent_t, zip(cue_ids, aligned_offs, lengths)))
+        self.files = list(itertools.starmap(
+            afs2_file_ent_t, zip(cue_ids, aligned_offs, lengths)))
 
     def file_data_for_cue_id(self, cue_id):
         for f in self.files:
@@ -411,14 +452,18 @@ class AFSArchive(object):
 def extract_acb(acb_file, target_dir):
     utf = UTFTable(acb_file)
     cue = TrackList(utf)
+    if not cue.tracks:
+        return
     embedded_awb = io.BytesIO(utf.rows[0]["AwbFile"])
     data_source = AFSArchive(embedded_awb)
 
     for track in cue.tracks:
-        print(track)
-        name = "{0}{1}".format(track.name, wave_type_ftable.get(track.enc_type, track.enc_type))
+        # print(track)
+        name = "{0}{1}".format(track.name, wave_type_ftable.get(
+            track.enc_type, track.enc_type))
         with open(os.path.join(target_dir, name), "wb") as named_out_file:
-            named_out_file.write(data_source.file_data_for_cue_id(track.wav_id))
+            named_out_file.write(
+                data_source.file_data_for_cue_id(track.wav_id))
 
 
 def main(invocation, acb_file, target_dir, *_):
